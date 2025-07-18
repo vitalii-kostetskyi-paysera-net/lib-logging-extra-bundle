@@ -41,7 +41,7 @@ sentry:
     options:
         environment: '%kernel.environment%'
         release: 'v123'
-        send_attempts: 1
+        transport: 'sentry_transport'
 
 paysera_logging_extra:
     application_name: test-application-name
