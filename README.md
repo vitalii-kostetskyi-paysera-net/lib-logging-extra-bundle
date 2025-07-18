@@ -93,7 +93,6 @@ sentry:
     options:
         environment: '%kernel.environment%'
         release: '%env(VERSION)%' # your app version, optional
-        send_attempts: 1
 
 paysera_logging_extra:
   application_name: app-something   # customise this to know which project message was sent from
