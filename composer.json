@@ -17,7 +17,6 @@
     "require": {
         "php": "^7.2 || ^8.0",
         "ext-json": "*",
-        "ext-pdo_sqlite": "*",
         "graylog2/gelf-php": "^1.4.2",
         "monolog/monolog": "^1.24 || ^2.0",
         "sentry/sentry-symfony": "^5.3",
@@ -29,6 +28,7 @@
         "symfony/monolog-bundle": "^3.4|^5.0"
     },
     "require-dev": {
+        "ext-pdo_sqlite": "*",
         "doctrine/annotations": "^1.14",
         "doctrine/doctrine-bundle": "~2.6.0",
         "doctrine/orm": "^2.10",
