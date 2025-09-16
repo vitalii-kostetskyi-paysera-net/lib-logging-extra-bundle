@@ -22,7 +22,6 @@
         "symfony/monolog-bundle": "^3.4"
     },
     "require-dev": {
-        "ext-pdo_sqlite": "*",
         "doctrine/annotations": "^1.14",
         "doctrine/doctrine-bundle": "~2.6.0",
         "doctrine/orm": "^2.10",
