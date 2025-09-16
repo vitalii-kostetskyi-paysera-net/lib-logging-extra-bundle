@@ -8,7 +8,7 @@ use Doctrine\DBAL\ConnectionException;
 use Gelf\Message;
 use Monolog\Handler\FingersCrossedHandler;
 use Paysera\LoggingExtraBundle\Tests\Functional\Fixtures\Handler\TestGraylogHandler;
-use Paysera\LoggingExtraBundle\Tests\Functional\Fixtures\Handler\TestSentryTransport;
+use Paysera\LoggingExtraBundle\Tests\Functional\Fixtures\Service\TestTransport;
 use Psr\Log\LoggerInterface;
 use Sentry\ClientInterface;
 use Sentry\Event;
@@ -21,7 +21,7 @@ class FunctionalHandlersTest extends FunctionalTestCase
     private $graylogHandler;
 
     /**
-     * @var TestSentryTransport
+     * @var TestTransport
      */
     private $sentryTransport;
 
