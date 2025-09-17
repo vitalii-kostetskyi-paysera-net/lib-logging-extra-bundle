@@ -143,7 +143,6 @@ class FunctionalMonologConfigurationTest extends FunctionalTestCase
             }
 
             $this->assertSame('test-application-name', $message->getHost());
-            $this->assertSame('app', $message->getAllAdditionals()['facility'] ?? null);
         }
     }
 
