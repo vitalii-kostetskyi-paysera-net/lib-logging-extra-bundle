@@ -47,7 +47,8 @@ if (class_exists(LegacyResponseEvent::class)) {
 
         public function onKernelResponse(ResponseEvent $event): void
         {
-            if (HttpKernelInterface::MAIN_REQUEST !== $event->getRequestType()) {
+
+            if (1 !== $event->getRequestType()) {
                 return;
             }
 

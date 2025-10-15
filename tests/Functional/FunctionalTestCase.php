@@ -31,6 +31,10 @@ abstract class FunctionalTestCase extends TestCase
     protected function setUpContainer($testCase, $commonFile = 'common.yml')
     {
         $this->kernel = new TestKernel($testCase, $commonFile);
+
+        $filesystem = new Filesystem();
+        $filesystem->remove($this->kernel->getCacheDir());
+
         $this->kernel->boot();
         return $this->kernel->getContainer();
     }
@@ -62,6 +66,7 @@ abstract class FunctionalTestCase extends TestCase
         parse_str($parts['query'] ?? '', $query);
         $request = new Request($query, [], [], [], [], array_filter([
             'REQUEST_URI' => $parts['path'],
+            'SERVER_PORT' => 80,
             'REQUEST_METHOD' => $method,
             'HTTP_PHP_AUTH_USER' => $username,
             'HTTP_PHP_AUTH_PW' => $username !== null ? 'pass' : null,
