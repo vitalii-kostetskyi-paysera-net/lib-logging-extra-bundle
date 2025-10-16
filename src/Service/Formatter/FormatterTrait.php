@@ -30,9 +30,16 @@ trait FormatterTrait
             // Check initialization status first, before accessing the collection
             $isInitialized = $data->isInitialized();
 
-            // Only expand initialized collections if depth <= 3
+            // Monolog 1.x and 2.x have different depth tracking:
+            // - Monolog 1.x: entity properties are at depth 3, nested at depth 4
+            // - Monolog 2.x: entity properties are at depth 2, nested at depth 3
+            // We detect Monolog version by checking if Utils::jsonEncode() exists (Monolog 2.x only)
+            $maxDepthForExpansion = method_exists(Utils::class, 'jsonEncode') ? 2 : 3;
+
+            // Only expand initialized collections up to the threshold depth
+            // This allows expansion for direct properties of logged entities, but not for nested entities
             // When expanded, return array of class names for entities
-            if ($isInitialized && $depth <= 3) {
+            if ($isInitialized && $depth <= $maxDepthForExpansion) {
                 $result = [];
                 foreach ($data as $entity) {
                     // Convert entities in collections to just their class name
