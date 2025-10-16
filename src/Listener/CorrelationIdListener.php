@@ -47,7 +47,11 @@ if (class_exists(LegacyResponseEvent::class)) {
 
         public function onKernelResponse(ResponseEvent $event): void
         {
-            if (HttpKernelInterface::MAIN_REQUEST !== $event->getRequestType()) {
+            $mainRequestType = defined(HttpKernelInterface::class.'::MAIN_REQUEST')
+                ? HttpKernelInterface::MAIN_REQUEST   // Symfony 5.3+
+                : HttpKernelInterface::MASTER_REQUEST; // Symfony <=5.2
+
+            if ($mainRequestType !== $event->getRequestType()) {
                 return;
             }
 

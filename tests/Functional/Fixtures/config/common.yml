@@ -39,6 +39,15 @@ services:
     sentry_client:
         alias: Sentry\ClientInterface
         public: true
+
+    # Define doctrine.dbal.logger to make it available for decoration
+    # This service may not exist in older Symfony versions when logging: false
+    doctrine.dbal.logger:
+        class: Symfony\Bridge\Doctrine\Logger\DbalLogger
+        arguments:
+            - null
+            - null
+
     dbal_logger:
         decorates: doctrine.dbal.logger
         parent: doctrine.dbal.logger

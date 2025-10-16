@@ -25,16 +25,32 @@ trait FormatterTrait
 
     private function prenormalizeData($data, $depth)
     {
-        if ($depth > 2) {
-            return $this->getScalarRepresentation($data);
-        }
-
+        // Check for PersistentCollection and Proxy first
         if ($data instanceof PersistentCollection) {
-            return $data->isInitialized() ? iterator_to_array($data) : get_class($data);
+            // Check initialization status first, before accessing the collection
+            $isInitialized = $data->isInitialized();
+
+            // Only expand initialized collections if depth <= 3
+            // When expanded, return array of class names for entities
+            if ($isInitialized && $depth <= 3) {
+                $result = [];
+                foreach ($data as $entity) {
+                    // Convert entities in collections to just their class name
+                    $result[] = is_object($entity) ? get_class($entity) : $entity;
+                }
+                return $result;
+            }
+            // Always return class name for uninitialized or deep collections
+            return get_class($data);
         }
 
+        // Always normalize Proxies regardless of depth to get at least the ID
         if ($data instanceof Proxy || $data instanceof LegacyProxy) {
             return $this->normalizeProxy($data);
+        }
+
+        if ($depth > 3) {
+            return $this->getScalarRepresentation($data);
         }
 
         if (
@@ -92,10 +108,25 @@ trait FormatterTrait
 
     protected function toJson($data, $ignoreErrors = false): string
     {
-        return Utils::jsonEncode(
+        // Monolog 2.x has Utils::jsonEncode(), Monolog 1.x does not
+        if (method_exists(Utils::class, 'jsonEncode')) {
+            return Utils::jsonEncode(
+                $data,
+                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+                $ignoreErrors
+            );
+        }
+
+        // Fallback for Monolog 1.x
+        $json = json_encode(
             $data,
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
-            $ignoreErrors
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
         );
+
+        if ($json === false && !$ignoreErrors) {
+            throw new \RuntimeException('JSON encoding failed: ' . json_last_error_msg());
+        }
+
+        return $json ?: '{}';
     }
 }
