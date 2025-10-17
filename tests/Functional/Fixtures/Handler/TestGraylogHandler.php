@@ -28,8 +28,8 @@ if (class_exists('Monolog\LogRecord')) {
             return $messages;
         }
     }
-} elseif (trait_exists('Monolog\Handler\ProcessableHandlerTrait')) {
-    // Monolog v2 - has ProcessableHandlerTrait and return type hint
+} elseif (interface_exists('Monolog\Handler\ProcessableHandlerInterface')) {
+    // Monolog v2
     class TestGraylogHandler extends GelfHandler
     {
         private $publishedMessages = [];
@@ -48,7 +48,7 @@ if (class_exists('Monolog\LogRecord')) {
         }
     }
 } else {
-    // Monolog v1 - no return type hint
+    // Monolog v1
     class TestGraylogHandler extends GelfHandler
     {
         private $publishedMessages = [];
