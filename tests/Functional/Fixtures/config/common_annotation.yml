@@ -9,7 +9,7 @@ doctrine:
             main:
                 dir: "%kernel.project_dir%/tests/Functional/Fixtures/Entity"
                 prefix: "Paysera\\LoggingExtraBundle\\Tests\\Functional\\Fixtures\\Entity"
-                type: attribute
+                type: annotation
     dbal:
         driver:  pdo_sqlite
         memory:  true

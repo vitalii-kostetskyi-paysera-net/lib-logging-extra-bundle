@@ -19,6 +19,12 @@ class TestKernel extends Kernel
 
     public function __construct(string $testCaseFile, string $commonFile = 'common.yml')
     {
+        // Auto-select common file based on Symfony version for Doctrine mapping compatibility
+        // Symfony 7+ requires attribute mapping, older versions use annotation
+        if ($commonFile === 'common.yml' && version_compare(self::VERSION, '7.0', '<')) {
+            $commonFile = 'common_annotation.yml';
+        }
+
         parent::__construct((string)crc32($testCaseFile . $commonFile), true);
         $this->testCaseFile = $testCaseFile;
         $this->commonFile = $commonFile;
