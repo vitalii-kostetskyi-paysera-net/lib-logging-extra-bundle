@@ -11,41 +11,70 @@ use Sentry\State\Scope;
 /**
  * @php-cs-fixer-ignore Paysera/php_basic_code_style_chained_method_calls
  */
-class GroupExceptionsProcessor implements ProcessorInterface
-{
-    private $exceptionsClassesToGroup;
-
-    public function __construct(array $exceptionsClassesToGroup)
+if (class_exists('Monolog\LogRecord')) {
+    // Monolog v3+ - has LogRecord class with typed ProcessorInterface
+    class GroupExceptionsProcessor implements ProcessorInterface
     {
-        $this->exceptionsClassesToGroup = array_flip($exceptionsClassesToGroup);
-    }
+        private $exceptionsClassesToGroup;
 
-    /**
-     * @param array|\Monolog\LogRecord $record
-     * @return array|\Monolog\LogRecord
-     */
-    public function __invoke($record)
-    {
-        // Get context from LogRecord or array
-        // Check if it's a LogRecord without importing the class (Monolog v3+)
-        $isLogRecord = is_object($record) && get_class($record) === 'Monolog\LogRecord';
-        $context = $isLogRecord ? $record->context : $record['context'];
+        public function __construct(array $exceptionsClassesToGroup)
+        {
+            $this->exceptionsClassesToGroup = array_flip($exceptionsClassesToGroup);
+        }
 
-        if (!isset($context['exception'])) {
+        public function __invoke(\Monolog\LogRecord $record): \Monolog\LogRecord
+        {
+            if (!isset($record->context['exception'])) {
+                return $record;
+            }
+
+            $exception = $record->context['exception'];
+            $exceptionClass = get_class($exception);
+
+            if (isset($this->exceptionsClassesToGroup[$exceptionClass])) {
+                SentrySdk::getCurrentHub()
+                    ->configureScope(function (Scope $scope) use ($exceptionClass) {
+                        $scope->setFingerprint([$exceptionClass]);
+                    })
+                ;
+            }
+
             return $record;
         }
+    }
+} else {
+    // Monolog v1/v2 - uses array with untyped ProcessorInterface
+    class GroupExceptionsProcessor implements ProcessorInterface
+    {
+        private $exceptionsClassesToGroup;
 
-        $exception = $context['exception'];
-        $exceptionClass = get_class($exception);
-
-        if (isset($this->exceptionsClassesToGroup[$exceptionClass])) {
-            SentrySdk::getCurrentHub()
-                ->configureScope(function (Scope $scope) use ($exceptionClass) {
-                    $scope->setFingerprint([$exceptionClass]);
-                })
-            ;
+        public function __construct(array $exceptionsClassesToGroup)
+        {
+            $this->exceptionsClassesToGroup = array_flip($exceptionsClassesToGroup);
         }
 
-        return $record;
+        /**
+         * @param array $record
+         * @return array
+         */
+        public function __invoke($record)
+        {
+            if (!isset($record['context']['exception'])) {
+                return $record;
+            }
+
+            $exception = $record['context']['exception'];
+            $exceptionClass = get_class($exception);
+
+            if (isset($this->exceptionsClassesToGroup[$exceptionClass])) {
+                SentrySdk::getCurrentHub()
+                    ->configureScope(function (Scope $scope) use ($exceptionClass) {
+                        $scope->setFingerprint([$exceptionClass]);
+                    })
+                ;
+            }
+
+            return $record;
+        }
     }
 }

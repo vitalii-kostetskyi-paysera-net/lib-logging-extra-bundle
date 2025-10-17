@@ -7,31 +7,25 @@ namespace Paysera\LoggingExtraBundle\Service\Processor;
 use InvalidArgumentException;
 use Monolog\Processor\ProcessorInterface;
 
-class RemoveRootPrefixProcessor implements ProcessorInterface
-{
-    private $rootPrefix;
-
-    public function __construct(string $rootPrefix)
+if (class_exists('Monolog\LogRecord')) {
+    // Monolog v3+ - has LogRecord class with typed ProcessorInterface
+    class RemoveRootPrefixProcessor implements ProcessorInterface
     {
-        $this->rootPrefix = realpath($rootPrefix);
-        if ($this->rootPrefix === false) {
-            throw new InvalidArgumentException('Invalid root prefix specified');
+        private $rootPrefix;
+
+        public function __construct(string $rootPrefix)
+        {
+            $this->rootPrefix = realpath($rootPrefix);
+            if ($this->rootPrefix === false) {
+                throw new InvalidArgumentException('Invalid root prefix specified');
+            }
         }
-    }
 
-    /**
-     * @param array|\Monolog\LogRecord $record
-     * @return array|\Monolog\LogRecord
-     */
-    public function __invoke($record)
-    {
-        // Handle both Monolog v2 (array) and v3 (LogRecord)
-        // Check if it's a LogRecord without importing the class (Monolog v3+)
-        if (is_object($record) && get_class($record) === 'Monolog\LogRecord') {
+        public function __invoke(\Monolog\LogRecord $record): \Monolog\LogRecord
+        {
             $message = str_replace($this->rootPrefix, '<root>', $record->message);
-            // Create new LogRecord with modified message
-            $logRecordClass = get_class($record);
-            return new $logRecordClass(
+
+            return new \Monolog\LogRecord(
                 $record->datetime,
                 $record->channel,
                 $record->level,
@@ -41,9 +35,29 @@ class RemoveRootPrefixProcessor implements ProcessorInterface
                 $record->formatted
             );
         }
+    }
+} else {
+    // Monolog v1/v2 - uses array with untyped ProcessorInterface
+    class RemoveRootPrefixProcessor implements ProcessorInterface
+    {
+        private $rootPrefix;
 
-        // Monolog v1/v2 array handling
-        $record['message'] = str_replace($this->rootPrefix, '<root>', $record['message']);
-        return $record;
+        public function __construct(string $rootPrefix)
+        {
+            $this->rootPrefix = realpath($rootPrefix);
+            if ($this->rootPrefix === false) {
+                throw new InvalidArgumentException('Invalid root prefix specified');
+            }
+        }
+
+        /**
+         * @param array $record
+         * @return array
+         */
+        public function __invoke($record)
+        {
+            $record['message'] = str_replace($this->rootPrefix, '<root>', $record['message']);
+            return $record;
+        }
     }
 }

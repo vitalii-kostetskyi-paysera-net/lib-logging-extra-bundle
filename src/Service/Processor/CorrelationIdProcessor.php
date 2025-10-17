@@ -7,29 +7,22 @@ namespace Paysera\LoggingExtraBundle\Service\Processor;
 use Monolog\Processor\ProcessorInterface;
 use Paysera\LoggingExtraBundle\Service\CorrelationIdProvider;
 
-class CorrelationIdProcessor implements ProcessorInterface
-{
-    private $correlationIdProvider;
-
-    public function __construct(CorrelationIdProvider $correlationIdProvider)
+if (class_exists('Monolog\LogRecord')) {
+    // Monolog v3+ - has LogRecord class with typed ProcessorInterface
+    class CorrelationIdProcessor implements ProcessorInterface
     {
-        $this->correlationIdProvider = $correlationIdProvider;
-    }
+        private $correlationIdProvider;
 
-    /**
-     * @param array|\Monolog\LogRecord $record
-     * @return array|\Monolog\LogRecord
-     */
-    public function __invoke($record)
-    {
-        $correlationId = $this->correlationIdProvider->getCorrelationId();
+        public function __construct(CorrelationIdProvider $correlationIdProvider)
+        {
+            $this->correlationIdProvider = $correlationIdProvider;
+        }
 
-        // Handle both Monolog v2 (array) and v3 (LogRecord)
-        // Check if it's a LogRecord without importing the class (Monolog v3+)
-        if (is_object($record) && get_class($record) === 'Monolog\LogRecord') {
-            // Create new LogRecord with modified extra field
-            $logRecordClass = get_class($record);
-            return new $logRecordClass(
+        public function __invoke(\Monolog\LogRecord $record): \Monolog\LogRecord
+        {
+            $correlationId = $this->correlationIdProvider->getCorrelationId();
+
+            return new \Monolog\LogRecord(
                 $record->datetime,
                 $record->channel,
                 $record->level,
@@ -39,9 +32,27 @@ class CorrelationIdProcessor implements ProcessorInterface
                 $record->formatted
             );
         }
+    }
+} else {
+    // Monolog v1/v2 - uses array with untyped ProcessorInterface
+    class CorrelationIdProcessor implements ProcessorInterface
+    {
+        private $correlationIdProvider;
 
-        // Monolog v1/v2 array handling
-        $record['extra']['correlation_id'] = $correlationId;
-        return $record;
+        public function __construct(CorrelationIdProvider $correlationIdProvider)
+        {
+            $this->correlationIdProvider = $correlationIdProvider;
+        }
+
+        /**
+         * @param array $record
+         * @return array
+         */
+        public function __invoke($record)
+        {
+            $correlationId = $this->correlationIdProvider->getCorrelationId();
+            $record['extra']['correlation_id'] = $correlationId;
+            return $record;
+        }
     }
 }
