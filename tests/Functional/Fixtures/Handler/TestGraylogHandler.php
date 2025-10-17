@@ -29,12 +29,12 @@ if (class_exists('Monolog\LogRecord')) {
         }
     }
 } else {
-    // Monolog v1/v2
+    // Monolog v1/v2 - no return type on write() method
     class TestGraylogHandler extends GelfHandler
     {
         private $publishedMessages = [];
 
-        protected function write(array $record): void
+        protected function write(array $record)
         {
             $message = $this->getFormatter()->format($record);
             $this->publishedMessages[] = $message;
