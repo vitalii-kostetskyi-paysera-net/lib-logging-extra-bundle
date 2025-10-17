@@ -36,8 +36,8 @@ if (class_exists('Monolog\LogRecord') && !class_exists('Monolog\DateTimeImmutabl
 
         protected function write(array $record): void
         {
-            $message = $this->getFormatter()->format($record);
-            $this->publishedMessages[] = $message;
+            // In Monolog v2, record is already formatted by AbstractProcessingHandler
+            $this->publishedMessages[] = $record['formatted'];
         }
 
         public function flushPublishedMessages()
@@ -55,8 +55,8 @@ if (class_exists('Monolog\LogRecord') && !class_exists('Monolog\DateTimeImmutabl
 
         protected function write(array $record)
         {
-            $message = $this->getFormatter()->format($record);
-            $this->publishedMessages[] = $message;
+            // In Monolog v1, record is already formatted by AbstractProcessingHandler
+            $this->publishedMessages[] = $record['formatted'];
         }
 
         public function flushPublishedMessages()
