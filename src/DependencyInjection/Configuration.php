@@ -9,7 +9,7 @@ use Symfony\Component\Config\Definition\ConfigurationInterface;
 
 class Configuration implements ConfigurationInterface
 {
-    public function getConfigTreeBuilder()
+    public function getConfigTreeBuilder(): TreeBuilder
     {
         if (method_exists(TreeBuilder::class, 'getRootNode')) {
             $treeBuilder = new TreeBuilder('paysera_logging_extra');
