@@ -9,8 +9,8 @@ use Monolog\Handler\GelfHandler;
 /**
  * @php-cs-fixer-ignore Paysera/php_basic_code_style_default_values_in_constructor
  */
-if (class_exists('Monolog\LogRecord')) {
-    // Monolog v3+
+if (class_exists('Monolog\LogRecord') && !class_exists('Monolog\DateTimeImmutable', false)) {
+    // Monolog v3+ - has LogRecord class and no DateTimeImmutable (removed in v3)
     class TestGraylogHandler extends GelfHandler
     {
         private $publishedMessages = [];
@@ -28,8 +28,8 @@ if (class_exists('Monolog\LogRecord')) {
             return $messages;
         }
     }
-} elseif (interface_exists('Monolog\Handler\ProcessableHandlerInterface')) {
-    // Monolog v2
+} elseif (class_exists('Monolog\DateTimeImmutable')) {
+    // Monolog v2 - has DateTimeImmutable class
     class TestGraylogHandler extends GelfHandler
     {
         private $publishedMessages = [];
@@ -48,7 +48,7 @@ if (class_exists('Monolog\LogRecord')) {
         }
     }
 } else {
-    // Monolog v1
+    // Monolog v1 - no DateTimeImmutable class
     class TestGraylogHandler extends GelfHandler
     {
         private $publishedMessages = [];
