@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Paysera\LoggingExtraBundle\Service\Processor;
 
-use Monolog\Processor\ProcessorInterface;
 use InvalidArgumentException;
+use Monolog\Processor\ProcessorInterface;
 
 class RemoveRootPrefixProcessor implements ProcessorInterface
 {
@@ -19,10 +19,31 @@ class RemoveRootPrefixProcessor implements ProcessorInterface
         }
     }
 
-    public function __invoke(array $record)
+    /**
+     * @param array|\Monolog\LogRecord $record
+     * @return array|\Monolog\LogRecord
+     */
+    public function __invoke($record)
     {
-        $record['message'] = str_replace($this->rootPrefix, '<root>', $record['message']);
+        // Handle both Monolog v2 (array) and v3 (LogRecord)
+        // Check if it's a LogRecord without importing the class (Monolog v3+)
+        if (is_object($record) && get_class($record) === 'Monolog\LogRecord') {
+            $message = str_replace($this->rootPrefix, '<root>', $record->message);
+            // Create new LogRecord with modified message
+            $logRecordClass = get_class($record);
+            return new $logRecordClass(
+                $record->datetime,
+                $record->channel,
+                $record->level,
+                $message,
+                $record->context,
+                $record->extra,
+                $record->formatted
+            );
+        }
 
+        // Monolog v1/v2 array handling
+        $record['message'] = str_replace($this->rootPrefix, '<root>', $record['message']);
         return $record;
     }
 }

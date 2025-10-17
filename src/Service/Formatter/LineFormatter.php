@@ -9,4 +9,5 @@ use Monolog\Formatter\LineFormatter as MonologLineFormatter;
 class LineFormatter extends MonologLineFormatter
 {
     use FormatterTrait;
+    use NormalizeCompatibilityTrait;
 }

@@ -14,10 +14,19 @@ use Throwable;
 
 /**
  * To be used on classes extending NormalizerFormatter
+ *
+ * Classes using this trait should override normalize() method and call normalizeWithPrenormalization()
  */
 trait FormatterTrait
 {
-    protected function normalize($data, $depth = 0)
+    /**
+     * Normalizes given data with pre-processing for Doctrine entities and collections.
+     *
+     * @param mixed $data
+     * @param int $depth
+     * @return mixed
+     */
+    protected function normalizeWithPrenormalization($data, $depth = 0)
     {
         $prenormalizedData = $this->prenormalizeData($data, $depth);
 

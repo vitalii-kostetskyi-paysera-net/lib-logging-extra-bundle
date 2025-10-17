@@ -20,13 +20,22 @@ class GroupExceptionsProcessor implements ProcessorInterface
         $this->exceptionsClassesToGroup = array_flip($exceptionsClassesToGroup);
     }
 
-    public function __invoke(array $record)
+    /**
+     * @param array|\Monolog\LogRecord $record
+     * @return array|\Monolog\LogRecord
+     */
+    public function __invoke($record)
     {
-        if (!isset($record['context']['exception'])) {
+        // Get context from LogRecord or array
+        // Check if it's a LogRecord without importing the class (Monolog v3+)
+        $isLogRecord = is_object($record) && get_class($record) === 'Monolog\LogRecord';
+        $context = $isLogRecord ? $record->context : $record['context'];
+
+        if (!isset($context['exception'])) {
             return $record;
         }
 
-        $exception = $record['context']['exception'];
+        $exception = $context['exception'];
         $exceptionClass = get_class($exception);
 
         if (isset($this->exceptionsClassesToGroup[$exceptionClass])) {

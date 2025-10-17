@@ -1,36 +1,44 @@
 #!/usr/bin/env bash
 set -e
 
-SYMFONY_VERSION="${1:-4.*}"
-DEPENDENCY_VERSION="${2:-highest}"
+# Usage: ./test-ci-locally.sh [PHP_VERSION] [SYMFONY_VERSION] [DEPENDENCY_VERSION]
+# Examples:
+#   ./test-ci-locally.sh 8.4 7.* highest
+#   ./test-ci-locally.sh 8.3 6.* lowest
+#   ./test-ci-locally.sh 8.2 5.*
 
-# Set environment variables (like in CI)
-export SYMFONY_REQUIRE="${SYMFONY_VERSION}"
-export COMPOSER_PROCESS_TIMEOUT=0
-export COMPOSER_NO_INTERACTION=1
-export COMPOSER_NO_AUDIT=1
+PHP_VERSION="${1:-8.4}"
+SYMFONY_VERSION="${2:-7.*}"
+DEPENDENCY_VERSION="${3:-highest}"
 
-# Backup composer.lock and composer.json
-[ -f "composer.lock" ] && cp composer.lock composer.lock.backup
-cp composer.json composer.json.backup
+echo "=========================================="
+echo "Testing with:"
+echo "  PHP: ${PHP_VERSION}"
+echo "  Symfony: ${SYMFONY_VERSION}"
+echo "  Dependencies: ${DEPENDENCY_VERSION}"
+echo "=========================================="
+echo ""
 
-# Remove composer.lock to simulate require-lock-file: false
-rm -f composer.lock
+# Build the Docker image with the specified versions
+IMAGE_NAME="lib-logging-extra-bundle-test"
+# Sanitize tag name by replacing special characters
+SANITIZED_SYMFONY_VERSION=$(echo "${SYMFONY_VERSION}" | sed 's/[^a-zA-Z0-9._-]/-/g')
+IMAGE_TAG="${PHP_VERSION}-symfony-${SANITIZED_SYMFONY_VERSION}-${DEPENDENCY_VERSION}"
 
-# Install symfony/flex to enforce SYMFONY_REQUIRE
-composer config --no-plugins allow-plugins.symfony/flex true
-composer require --no-update symfony/flex:"^1.0|^2.0"
+echo "Building Docker image..."
+docker build \
+    --build-arg PHP_VERSION="${PHP_VERSION}" \
+    --build-arg SYMFONY_VERSION="${SYMFONY_VERSION}" \
+    --build-arg DEPENDENCY_VERSION="${DEPENDENCY_VERSION}" \
+    -f Dockerfile.test \
+    -t "${IMAGE_NAME}:${IMAGE_TAG}" \
+    .
 
-# Install dependencies
-if [ "${DEPENDENCY_VERSION}" = "lowest" ]; then
-    composer update --prefer-lowest --prefer-stable
-else
-    composer update --prefer-stable
-fi
+echo ""
+echo "Running tests..."
+docker run --rm "${IMAGE_NAME}:${IMAGE_TAG}"
 
-# Run PHPUnit
-./bin/phpunit
-
-# Restore backups
-mv composer.json.backup composer.json
-[ -f "composer.lock.backup" ] && mv composer.lock.backup composer.lock || rm -f composer.lock
+echo ""
+echo "=========================================="
+echo "Tests completed successfully!"
+echo "=========================================="
