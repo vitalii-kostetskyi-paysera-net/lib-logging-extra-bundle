@@ -28,8 +28,27 @@ if (class_exists('Monolog\LogRecord')) {
             return $messages;
         }
     }
+} elseif (interface_exists('Monolog\ResettableInterface')) {
+    // Monolog v2 - has return type hint
+    class TestGraylogHandler extends GelfHandler
+    {
+        private $publishedMessages = [];
+
+        protected function write(array $record): void
+        {
+            $message = $this->getFormatter()->format($record);
+            $this->publishedMessages[] = $message;
+        }
+
+        public function flushPublishedMessages()
+        {
+            $messages = $this->publishedMessages;
+            $this->publishedMessages = [];
+            return $messages;
+        }
+    }
 } else {
-    // Monolog v1/v2 - no return type on write() method
+    // Monolog v1 - no return type hint
     class TestGraylogHandler extends GelfHandler
     {
         private $publishedMessages = [];
