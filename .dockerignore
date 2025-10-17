@@ -1,0 +1,9 @@
+.git
+.github
+vendor/
+composer.lock
+composer.lock.backup
+composer.json.backup
+.idea
+.vscode
+*.md

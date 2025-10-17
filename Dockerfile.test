@@ -1,0 +1,51 @@
+# Multi-stage Dockerfile for testing with different PHP versions
+ARG PHP_VERSION=8.4
+FROM php:${PHP_VERSION}-cli
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    unzip \
+    zip \
+    libzip-dev \
+    && docker-php-ext-install zip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /app
+
+# Set environment variables for non-interactive installation
+ENV COMPOSER_PROCESS_TIMEOUT=0
+ENV COMPOSER_NO_INTERACTION=1
+ENV COMPOSER_NO_AUDIT=1
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+# Copy composer files first for better layer caching
+COPY composer.json composer.json
+
+# Install symfony/flex to enforce SYMFONY_REQUIRE
+ARG SYMFONY_VERSION=7.*
+ENV SYMFONY_REQUIRE=${SYMFONY_VERSION}
+
+RUN composer config --no-plugins allow-plugins.symfony/flex true && \
+    composer require --no-update symfony/flex:"^1.0|^2.0"
+
+# Copy the rest of the application
+COPY . .
+
+# Install dependencies based on the dependency version (lowest or highest)
+ARG DEPENDENCY_VERSION=highest
+RUN if [ "${DEPENDENCY_VERSION}" = "lowest" ]; then \
+        composer update --prefer-lowest --prefer-stable; \
+    else \
+        composer update --prefer-stable; \
+    fi
+
+# Clean up Symfony Flex artifacts (similar to CI workflow)
+RUN rm -rf config/ public/ src/Controller/ src/Entity/ src/Kernel.php symfony.lock .env .env.test || true
+
+# Default command runs tests
+CMD ["./bin/phpunit"]
