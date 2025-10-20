@@ -66,8 +66,5 @@ jobs:
         with:
           dependency-versions: ${{ matrix.dependency }}
 
-      - name: Clean up Symfony Flex artifacts
-        run: rm -rf config/ public/ src/Controller/ src/Entity/ src/Kernel.php symfony.lock .env .env.test
-
       - name: Run tests
         run: composer test
