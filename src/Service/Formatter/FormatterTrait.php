@@ -12,11 +12,6 @@ use Monolog\Logger;
 use Monolog\Utils;
 use Throwable;
 
-/**
- * To be used on classes extending NormalizerFormatter
- *
- * Classes using this trait should override normalize() method and call normalizeWithPrenormalization()
- */
 trait FormatterTrait
 {
     /**
@@ -35,9 +30,7 @@ trait FormatterTrait
 
     private function prenormalizeData($data, $depth)
     {
-        // Check for PersistentCollection and Proxy first
         if ($data instanceof PersistentCollection) {
-            // Check initialization status first, before accessing the collection
             $isInitialized = $data->isInitialized();
 
             // Monolog 1.x and 2.x have different depth tracking:

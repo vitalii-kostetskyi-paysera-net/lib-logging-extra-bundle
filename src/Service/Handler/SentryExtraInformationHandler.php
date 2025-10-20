@@ -28,7 +28,6 @@ final class SentryExtraInformationHandler extends HandlerWrapper
         // Process record - pass original record, it handles both
         $processedRecord = $this->processRecord($record);
 
-        // Get array representation for our processing
         // Check if it's a LogRecord without importing the class (Monolog v3+)
         $isLogRecord = is_object($processedRecord) && get_class($processedRecord) === 'Monolog\LogRecord';
         $recordArray = $isLogRecord ? $processedRecord->toArray() : $processedRecord;
