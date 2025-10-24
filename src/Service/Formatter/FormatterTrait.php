@@ -4,19 +4,23 @@ declare(strict_types=1);
 
 namespace Paysera\LoggingExtraBundle\Service\Formatter;
 
-use DateTimeInterface;
-use Doctrine\Common\Persistence\Proxy as LegacyProxy;
-use Doctrine\Persistence\Proxy;
 use Doctrine\ORM\PersistentCollection;
+use Doctrine\Persistence\Proxy;
+use DateTimeInterface;
+use Monolog\Logger;
 use Monolog\Utils;
 use Throwable;
 
-/**
- * To be used on classes extending NormalizerFormatter
- */
 trait FormatterTrait
 {
-    protected function normalize($data, $depth = 0)
+    /**
+     * Normalizes given data with pre-processing for Doctrine entities and collections.
+     *
+     * @param mixed $data
+     * @param int $depth
+     * @return mixed
+     */
+    protected function normalizeWithPrenormalization($data, $depth = 0)
     {
         $prenormalizedData = $this->prenormalizeData($data, $depth);
 
@@ -25,16 +29,37 @@ trait FormatterTrait
 
     private function prenormalizeData($data, $depth)
     {
-        if ($depth > 2) {
-            return $this->getScalarRepresentation($data);
-        }
+        // Monolog 1.x and 2.x have different depth tracking:
+        // - Monolog 1.x: entity properties are at depth 3, nested at depth 4
+        // - Monolog 2.x: entity properties are at depth 2, nested at depth 3
+        // We detect Monolog version using the Logger::API constant (1 for 1.x, 2 for 2.x, 3 for 3.x)
+        $maxDepthForExpansion = (defined('Monolog\Logger::API') && Logger::API >= 2) ? 2 : 3;
 
         if ($data instanceof PersistentCollection) {
-            return $data->isInitialized() ? iterator_to_array($data) : get_class($data);
+            $isInitialized = $data->isInitialized();
+
+            // Only expand initialized collections up to the threshold depth
+            // This allows expansion for direct properties of logged entities, but not for nested entities
+            // When expanded, return array of class names for entities
+            if ($isInitialized && $depth <= $maxDepthForExpansion) {
+                $result = [];
+                foreach ($data as $entity) {
+                    // Convert entities in collections to just their class name
+                    $result[] = is_object($entity) ? get_class($entity) : $entity;
+                }
+                return $result;
+            }
+            // Always return class name for uninitialized or deep collections
+            return get_class($data);
         }
 
-        if ($data instanceof Proxy || $data instanceof LegacyProxy) {
+        // Always normalize Proxies regardless of depth to get at least the ID
+        if ($data instanceof Proxy || is_a($data, 'Doctrine\Common\Persistence\Proxy')) {
             return $this->normalizeProxy($data);
+        }
+
+        if ($depth > $maxDepthForExpansion) {
+            return $this->getScalarRepresentation($data);
         }
 
         if (
@@ -92,10 +117,19 @@ trait FormatterTrait
 
     protected function toJson($data, $ignoreErrors = false): string
     {
-        return Utils::jsonEncode(
+        // Monolog 2.x has Utils::jsonEncode(), Monolog 1.x does not
+        if (method_exists(Utils::class, 'jsonEncode')) {
+            return Utils::jsonEncode(
+                $data,
+                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
+                $ignoreErrors
+            );
+        }
+
+        // Fallback for Monolog 1.x
+        return json_encode(
             $data,
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
-            $ignoreErrors
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | ($ignoreErrors ? 0 : JSON_THROW_ON_ERROR)
         );
     }
 }

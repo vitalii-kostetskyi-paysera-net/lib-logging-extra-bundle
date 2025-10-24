@@ -9,4 +9,5 @@ use Monolog\Formatter\GelfMessageFormatter as MonologGelfMessageFormatter;
 class GelfMessageFormatter extends MonologGelfMessageFormatter
 {
     use FormatterTrait;
+    use NormalizeCompatibilityTrait;
 }

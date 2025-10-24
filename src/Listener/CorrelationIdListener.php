@@ -9,52 +9,36 @@ use Symfony\Component\HttpKernel\Event\FilterResponseEvent as LegacyResponseEven
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 
-if (class_exists(LegacyResponseEvent::class)) {
-    class CorrelationIdListener
-    {
-        const HEADER_NAME = 'Paysera-Correlation-Id';
-
-        private $correlationIdProvider;
-
-        public function __construct(CorrelationIdProvider $correlationIdProvider)
-        {
-            $this->correlationIdProvider = $correlationIdProvider;
-        }
-
-        public function onKernelResponse(LegacyResponseEvent $event)
-        {
-            if (HttpKernelInterface::MASTER_REQUEST !== $event->getRequestType()) {
-                return;
-            }
-
-            $event->getResponse()->headers->set(
-                self::HEADER_NAME,
-                $this->correlationIdProvider->getCorrelationId()
-            );
-        }
-    }
+if (class_exists(ResponseEvent::class)) {
+    class_alias(ResponseEvent::class, 'Paysera\LoggingExtraBundle\Listener\ResponseEventAlias');
 } else {
-    class CorrelationIdListener
+    class_alias(LegacyResponseEvent::class, 'Paysera\LoggingExtraBundle\Listener\ResponseEventAlias');
+}
+
+class CorrelationIdListener
+{
+    public const HEADER_NAME = 'Paysera-Correlation-Id';
+
+    private CorrelationIdProvider $correlationIdProvider;
+
+    public function __construct(CorrelationIdProvider $correlationIdProvider)
     {
-        public const HEADER_NAME = 'Paysera-Correlation-Id';
+        $this->correlationIdProvider = $correlationIdProvider;
+    }
 
-        private $correlationIdProvider;
+    public function onKernelResponse(ResponseEventAlias $event): void
+    {
+        $mainRequestType = defined(HttpKernelInterface::class.'::MAIN_REQUEST')
+            ? HttpKernelInterface::MAIN_REQUEST   // Symfony 5.3+
+            : HttpKernelInterface::MASTER_REQUEST; // Symfony <=5.2
 
-        public function __construct(CorrelationIdProvider $correlationIdProvider)
-        {
-            $this->correlationIdProvider = $correlationIdProvider;
+        if ($mainRequestType !== $event->getRequestType()) {
+            return;
         }
 
-        public function onKernelResponse(ResponseEvent $event): void
-        {
-            if (HttpKernelInterface::MAIN_REQUEST !== $event->getRequestType()) {
-                return;
-            }
-
-            $event->getResponse()->headers->set(
-                self::HEADER_NAME,
-                $this->correlationIdProvider->getCorrelationId()
-            );
-        }
+        $event->getResponse()->headers->set(
+            self::HEADER_NAME,
+            $this->correlationIdProvider->getCorrelationId()
+        );
     }
 }

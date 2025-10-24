@@ -4,25 +4,60 @@ declare(strict_types=1);
 
 namespace Paysera\LoggingExtraBundle\Service\Processor;
 
-use Monolog\Processor\ProcessorInterface;
 use InvalidArgumentException;
+use Monolog\Processor\ProcessorInterface;
 
-class RemoveRootPrefixProcessor implements ProcessorInterface
-{
-    private $rootPrefix;
-
-    public function __construct(string $rootPrefix)
+if (class_exists('Monolog\LogRecord')) {
+    // Monolog v3+ - has LogRecord class with typed ProcessorInterface
+    class RemoveRootPrefixProcessor implements ProcessorInterface
     {
-        $this->rootPrefix = realpath($rootPrefix);
-        if ($this->rootPrefix === false) {
-            throw new InvalidArgumentException('Invalid root prefix specified');
+        private $rootPrefix;
+
+        public function __construct(string $rootPrefix)
+        {
+            $this->rootPrefix = realpath($rootPrefix);
+            if ($this->rootPrefix === false) {
+                throw new InvalidArgumentException('Invalid root prefix specified');
+            }
+        }
+
+        public function __invoke(\Monolog\LogRecord $record): \Monolog\LogRecord
+        {
+            $message = str_replace($this->rootPrefix, '<root>', $record->message);
+
+            return new \Monolog\LogRecord(
+                $record->datetime,
+                $record->channel,
+                $record->level,
+                $message,
+                $record->context,
+                $record->extra,
+                $record->formatted
+            );
         }
     }
-
-    public function __invoke(array $record)
+} else {
+    // Monolog v1/v2 - uses array with untyped ProcessorInterface
+    class RemoveRootPrefixProcessor implements ProcessorInterface
     {
-        $record['message'] = str_replace($this->rootPrefix, '<root>', $record['message']);
+        private $rootPrefix;
 
-        return $record;
+        public function __construct(string $rootPrefix)
+        {
+            $this->rootPrefix = realpath($rootPrefix);
+            if ($this->rootPrefix === false) {
+                throw new InvalidArgumentException('Invalid root prefix specified');
+            }
+        }
+
+        /**
+         * @param array $record
+         * @return array
+         */
+        public function __invoke($record)
+        {
+            $record['message'] = str_replace($this->rootPrefix, '<root>', $record['message']);
+            return $record;
+        }
     }
 }

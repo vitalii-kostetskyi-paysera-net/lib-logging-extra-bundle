@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 3.1.0
+### Removed
+- Removed support for PHP 7.2 version
+
+### Fixed
+- Fixed CI by adding ignored PHP and Symfony version matrix
+- Fixed Monolog library support in all PHP and Symfony version ranges
+
 ## 3.0.0
 ### Changed
 - Supporting version of sentry/sentry-symfony to ^5.3 

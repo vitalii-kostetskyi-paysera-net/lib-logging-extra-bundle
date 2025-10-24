@@ -7,18 +7,52 @@ namespace Paysera\LoggingExtraBundle\Service\Processor;
 use Monolog\Processor\ProcessorInterface;
 use Paysera\LoggingExtraBundle\Service\CorrelationIdProvider;
 
-class CorrelationIdProcessor implements ProcessorInterface
-{
-    private $correlationIdProvider;
-
-    public function __construct(CorrelationIdProvider $correlationIdProvider)
+if (class_exists('Monolog\LogRecord')) {
+    // Monolog v3+ - has LogRecord class with typed ProcessorInterface
+    class CorrelationIdProcessor implements ProcessorInterface
     {
-        $this->correlationIdProvider = $correlationIdProvider;
+        private $correlationIdProvider;
+
+        public function __construct(CorrelationIdProvider $correlationIdProvider)
+        {
+            $this->correlationIdProvider = $correlationIdProvider;
+        }
+
+        public function __invoke(\Monolog\LogRecord $record): \Monolog\LogRecord
+        {
+            $correlationId = $this->correlationIdProvider->getCorrelationId();
+
+            return new \Monolog\LogRecord(
+                $record->datetime,
+                $record->channel,
+                $record->level,
+                $record->message,
+                $record->context,
+                array_merge($record->extra, ['correlation_id' => $correlationId]),
+                $record->formatted
+            );
+        }
     }
-
-    public function __invoke(array $record)
+} else {
+    // Monolog v1/v2 - uses array with untyped ProcessorInterface
+    class CorrelationIdProcessor implements ProcessorInterface
     {
-        $record['extra']['correlation_id'] = $this->correlationIdProvider->getCorrelationId();
-        return $record;
+        private $correlationIdProvider;
+
+        public function __construct(CorrelationIdProvider $correlationIdProvider)
+        {
+            $this->correlationIdProvider = $correlationIdProvider;
+        }
+
+        /**
+         * @param array $record
+         * @return array
+         */
+        public function __invoke($record)
+        {
+            $correlationId = $this->correlationIdProvider->getCorrelationId();
+            $record['extra']['correlation_id'] = $correlationId;
+            return $record;
+        }
     }
 }
