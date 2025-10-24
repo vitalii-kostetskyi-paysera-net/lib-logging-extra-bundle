@@ -7,7 +7,6 @@ namespace Paysera\LoggingExtraBundle\Service\Formatter;
 use Doctrine\ORM\PersistentCollection;
 use Doctrine\Persistence\Proxy;
 use DateTimeInterface;
-use RuntimeException;
 use Monolog\Logger;
 use Monolog\Utils;
 use Throwable;
@@ -59,7 +58,7 @@ trait FormatterTrait
             return $this->normalizeProxy($data);
         }
 
-        if ($depth > 3) {
+        if ($depth > $maxDepthForExpansion) {
             return $this->getScalarRepresentation($data);
         }
 
@@ -128,15 +127,9 @@ trait FormatterTrait
         }
 
         // Fallback for Monolog 1.x
-        $json = json_encode(
+        return json_encode(
             $data,
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | ($ignoreErrors ? 0 : JSON_THROW_ON_ERROR)
         );
-
-        if ($json === false && !$ignoreErrors) {
-            throw new RuntimeException('JSON encoding failed: ' . json_last_error_msg());
-        }
-
-        return $json ?: '{}';
     }
 }
