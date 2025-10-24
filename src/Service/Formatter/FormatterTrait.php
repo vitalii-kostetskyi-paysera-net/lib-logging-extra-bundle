@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Paysera\LoggingExtraBundle\Service\Formatter;
 
-use DateTimeInterface;
-use Doctrine\Common\Persistence\Proxy as LegacyProxy;
-use Doctrine\Persistence\Proxy;
 use Doctrine\ORM\PersistentCollection;
+use Doctrine\Persistence\Proxy;
+use DateTimeInterface;
+use RuntimeException;
 use Monolog\Logger;
 use Monolog\Utils;
 use Throwable;
@@ -55,7 +55,7 @@ trait FormatterTrait
         }
 
         // Always normalize Proxies regardless of depth to get at least the ID
-        if ($data instanceof Proxy || $data instanceof LegacyProxy) {
+        if ($data instanceof Proxy || is_a($data, 'Doctrine\Common\Persistence\Proxy')) {
             return $this->normalizeProxy($data);
         }
 
@@ -134,7 +134,7 @@ trait FormatterTrait
         );
 
         if ($json === false && !$ignoreErrors) {
-            throw new \RuntimeException('JSON encoding failed: ' . json_last_error_msg());
+            throw new RuntimeException('JSON encoding failed: ' . json_last_error_msg());
         }
 
         return $json ?: '{}';

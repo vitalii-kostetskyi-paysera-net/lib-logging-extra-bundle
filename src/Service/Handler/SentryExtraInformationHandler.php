@@ -36,13 +36,13 @@ final class SentryExtraInformationHandler extends HandlerWrapper
         $recordArray['formatted'] = $this->getFormatter()->format($isLogRecord ? $processedRecord : $recordArray);
 
         withScope(function (Scope $scope) use ($recordArray, $processedRecord, &$result): void {
-            if (isset($recordArray['context']['extra']) && \is_array($recordArray['context']['extra'])) {
+            if (isset($recordArray['context']['extra']) && is_array($recordArray['context']['extra'])) {
                 foreach ($recordArray['context']['extra'] as $key => $value) {
                     $scope->setExtra((string) $key, $value);
                 }
             }
 
-            if (isset($recordArray['context']['tags']) && \is_array($recordArray['context']['tags'])) {
+            if (isset($recordArray['context']['tags']) && is_array($recordArray['context']['tags'])) {
                 foreach ($recordArray['context']['tags'] as $key => $value) {
                     $scope->setTag($key, $value);
                 }
