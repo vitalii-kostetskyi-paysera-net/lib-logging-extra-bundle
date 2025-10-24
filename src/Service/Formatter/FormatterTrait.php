@@ -29,14 +29,14 @@ trait FormatterTrait
 
     private function prenormalizeData($data, $depth)
     {
+        // Monolog 1.x and 2.x have different depth tracking:
+        // - Monolog 1.x: entity properties are at depth 3, nested at depth 4
+        // - Monolog 2.x: entity properties are at depth 2, nested at depth 3
+        // We detect Monolog version using the Logger::API constant (1 for 1.x, 2 for 2.x, 3 for 3.x)
+        $maxDepthForExpansion = (defined('Monolog\Logger::API') && Logger::API >= 2) ? 2 : 3;
+
         if ($data instanceof PersistentCollection) {
             $isInitialized = $data->isInitialized();
-
-            // Monolog 1.x and 2.x have different depth tracking:
-            // - Monolog 1.x: entity properties are at depth 3, nested at depth 4
-            // - Monolog 2.x: entity properties are at depth 2, nested at depth 3
-            // We detect Monolog version using the Logger::API constant (1 for 1.x, 2 for 2.x, 3 for 3.x)
-            $maxDepthForExpansion = (defined('Monolog\Logger::API') && Logger::API >= 2) ? 2 : 3;
 
             // Only expand initialized collections up to the threshold depth
             // This allows expansion for direct properties of logged entities, but not for nested entities
