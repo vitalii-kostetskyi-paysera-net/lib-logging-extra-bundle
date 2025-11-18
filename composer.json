@@ -44,6 +44,9 @@
             "composer/package-versions-deprecated": true,
             "php-http/discovery": true
         },
+        "audit": {
+            "block-insecure": false
+        },
         "bin-dir": "bin",
         "sort-packages": true
     },
