@@ -9,32 +9,20 @@ use Monolog\Logger;
 use Monolog\Formatter\GelfMessageFormatter as MonologGelfMessageFormatter;
 
 /**
- * Custom GELF formatter that extends Monolog's GelfMessageFormatter
- *
- * Provides compatibility layer for different combinations of gelf-php and Monolog versions:
- * - gelf-php v1.x (has setFacility) works with all Monolog versions - use default
- * - gelf-php v2.x with Monolog v2+ (API >= 2) has native support - use default
- * - gelf-php v2.0.1 with Monolog v1 (API = 1) needs custom implementation - override format()
- *
- * Note: gelf-php v2.0.2+ added conflict with Monolog v1, but v2.0.1 doesn't have it.
+ * GELF formatter with gelf-php v2.0 compatibility for Monolog v1
  */
 if (method_exists('Gelf\Message', 'setFacility') || (defined('Monolog\Logger::API') && constant('Monolog\Logger::API') >= 2)) {
-    // gelf-php v1.x OR Monolog v2+ (API >= 2) - use default Monolog formatter
     class GelfMessageFormatter extends MonologGelfMessageFormatter
     {
         use FormatterTrait;
         use NormalizeCompatibilityTrait;
     }
 } else {
-    // gelf-php v2.0.1 with Monolog v1 (API = 1) - override to use setAdditional() instead of removed methods
     class GelfMessageFormatter extends MonologGelfMessageFormatter
     {
         use FormatterTrait;
         use NormalizeCompatibilityTrait;
 
-        /**
-         * Translates Monolog log levels to Graylog2 log priorities.
-         */
         private $logLevels = [
             Logger::DEBUG     => 7,
             Logger::INFO      => 6,
@@ -46,11 +34,6 @@ if (method_exists('Gelf\Message', 'setFacility') || (defined('Monolog\Logger::AP
             Logger::EMERGENCY => 0,
         ];
 
-        /**
-         * {@inheritdoc}
-         *
-         * Override to support gelf-php ^2.0 with Monolog v1 which removed setFacility(), setLine(), and setFile() methods
-         */
         public function format(array $record)
         {
             $record = parent::normalize($record);
@@ -61,14 +44,14 @@ if (method_exists('Gelf\Message', 'setFacility') || (defined('Monolog\Logger::AP
 
             $message = new Message();
 
-            // Convert datetime to float for gelf-php v2.0 strict typing
+            //region Timestamp conversion for gelf-php v2.0 strict typing
             $timestamp = $record['datetime'];
             if (is_string($timestamp)) {
-                // Monolog v1 normalizes to string format 'U.u'
                 $timestamp = (float) $timestamp;
             } elseif ($timestamp instanceof \DateTimeInterface) {
                 $timestamp = (float) $timestamp->format('U.u');
             }
+            //endregion
 
             $message
                 ->setTimestamp($timestamp)
@@ -76,29 +59,27 @@ if (method_exists('Gelf\Message', 'setFacility') || (defined('Monolog\Logger::AP
                 ->setHost($this->systemName)
                 ->setLevel($this->logLevels[$record['level']]);
 
-            // message length + system name length + 200 for padding / metadata
             $len = 200 + strlen((string) $record['message']) + strlen($this->systemName);
 
             if ($len > $this->maxLength) {
                 $message->setShortMessage(substr($record['message'], 0, $this->maxLength));
             }
 
-            // In gelf-php v2.0, setFacility() was removed, use setAdditional('facility') instead
+            //region setFacility/setLine/setFile replaced with setAdditional
             if (isset($record['channel'])) {
                 $message->setAdditional('facility', $record['channel']);
             }
 
-            // In gelf-php v2.0, setLine() was removed, use setAdditional('line') instead
             if (isset($record['extra']['line'])) {
                 $message->setAdditional('line', $record['extra']['line']);
                 unset($record['extra']['line']);
             }
 
-            // In gelf-php v2.0, setFile() was removed, use setAdditional('file') instead
             if (isset($record['extra']['file'])) {
                 $message->setAdditional('file', $record['extra']['file']);
                 unset($record['extra']['file']);
             }
+            //endregion
 
             foreach ($record['extra'] as $key => $val) {
                 $val = is_scalar($val) || null === $val ? $val : $this->toJson($val);
