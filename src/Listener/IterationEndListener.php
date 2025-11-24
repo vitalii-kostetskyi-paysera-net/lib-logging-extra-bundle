@@ -20,7 +20,7 @@ class IterationEndListener
 
     public function __construct(
         CorrelationIdProvider $correlationIdProvider,
-        ClientInterface $sentryClient = null
+        ?ClientInterface $sentryClient = null
     ) {
         $this->correlationIdProvider = $correlationIdProvider;
         $this->sentryClient = $sentryClient;
