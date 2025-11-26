@@ -14,6 +14,8 @@ if (class_exists('Monolog\LogRecord')) {
     // Monolog v3+ - uses mixed type hints
     trait NormalizeCompatibilityTrait
     {
+        use FormatterTrait;
+
         /**
          * {@inheritdoc}
          */
@@ -26,6 +28,8 @@ if (class_exists('Monolog\LogRecord')) {
     // Monolog v1/v2 - no type hints
     trait NormalizeCompatibilityTrait
     {
+        use FormatterTrait;
+
         /**
          * {@inheritdoc}
          * @param mixed $data

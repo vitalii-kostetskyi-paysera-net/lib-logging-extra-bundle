@@ -14,13 +14,11 @@ use Monolog\Formatter\GelfMessageFormatter as MonologGelfMessageFormatter;
 if (method_exists('Gelf\Message', 'setFacility') || (defined('Monolog\Logger::API') && constant('Monolog\Logger::API') >= 2)) {
     class GelfMessageFormatter extends MonologGelfMessageFormatter
     {
-        use FormatterTrait;
         use NormalizeCompatibilityTrait;
     }
 } else {
     class GelfMessageFormatter extends MonologGelfMessageFormatter
     {
-        use FormatterTrait;
         use NormalizeCompatibilityTrait;
 
         private $logLevels = [
@@ -44,14 +42,7 @@ if (method_exists('Gelf\Message', 'setFacility') || (defined('Monolog\Logger::AP
 
             $message = new Message();
 
-            //region Timestamp conversion for gelf-php v2.0 strict typing
-            $timestamp = $record['datetime'];
-            if (is_string($timestamp)) {
-                $timestamp = (float) $timestamp;
-            } elseif ($timestamp instanceof \DateTimeInterface) {
-                $timestamp = (float) $timestamp->format('U.u');
-            }
-            //endregion
+            $timestamp = $this->convertTimestamp($record['datetime']);
 
             $message
                 ->setTimestamp($timestamp)
@@ -65,7 +56,35 @@ if (method_exists('Gelf\Message', 'setFacility') || (defined('Monolog\Logger::AP
                 $message->setShortMessage(substr($record['message'], 0, $this->maxLength));
             }
 
-            //region setFacility/setLine/setFile replaced with setAdditional
+            $this->setFacilityLineAndFile($message, $record);
+            $this->addExtraFields($message, $record['extra']);
+            $this->addContextFields($message, $record['context']);
+
+            if (!$message->hasAdditional('file') && isset($record['context']['exception']['file'])) {
+                if (preg_match("/^(.+):([0-9]+)$/", $record['context']['exception']['file'], $matches)) {
+                    $message->setAdditional('file', $matches[1]);
+                    $message->setAdditional('line', (int)$matches[2]);
+                }
+            }
+
+            return $message;
+        }
+
+        private function convertTimestamp($timestamp): float
+        {
+            if (is_string($timestamp)) {
+                return (float) $timestamp;
+            }
+
+            if ($timestamp instanceof \DateTimeInterface) {
+                return (float) $timestamp->format('U.u');
+            }
+
+            return (float) $timestamp;
+        }
+
+        private function setFacilityLineAndFile(Message $message, array $record): void
+        {
             if (isset($record['channel'])) {
                 $message->setAdditional('facility', $record['channel']);
             }
@@ -79,9 +98,11 @@ if (method_exists('Gelf\Message', 'setFacility') || (defined('Monolog\Logger::AP
                 $message->setAdditional('file', $record['extra']['file']);
                 unset($record['extra']['file']);
             }
-            //endregion
+        }
 
-            foreach ($record['extra'] as $key => $val) {
+        private function addExtraFields(Message $message, array $extra): void
+        {
+            foreach ($extra as $key => $val) {
                 $val = is_scalar($val) || null === $val ? $val : $this->toJson($val);
                 $len = strlen($this->extraPrefix . $key . $val);
                 if ($len > $this->maxLength) {
@@ -90,8 +111,11 @@ if (method_exists('Gelf\Message', 'setFacility') || (defined('Monolog\Logger::AP
                 }
                 $message->setAdditional($this->extraPrefix . $key, $val);
             }
+        }
 
-            foreach ($record['context'] as $key => $val) {
+        private function addContextFields(Message $message, array $context): void
+        {
+            foreach ($context as $key => $val) {
                 $val = is_scalar($val) || null === $val ? $val : $this->toJson($val);
                 $len = strlen($this->contextPrefix . $key . $val);
                 if ($len > $this->maxLength) {
@@ -100,15 +124,6 @@ if (method_exists('Gelf\Message', 'setFacility') || (defined('Monolog\Logger::AP
                 }
                 $message->setAdditional($this->contextPrefix . $key, $val);
             }
-
-            if (!$message->hasAdditional('file') && isset($record['context']['exception']['file'])) {
-                if (preg_match("/^(.+):([0-9]+)$/", $record['context']['exception']['file'], $matches)) {
-                    $message->setAdditional('file', $matches[1]);
-                    $message->setAdditional('line', (int)$matches[2]);
-                }
-            }
-
-            return $message;
         }
     }
 }
